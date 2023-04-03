@@ -43,9 +43,11 @@ class HierarchicalAttentionNetwork(nn.Module):
             sent_lengths.append(code_line)
         
         code_tensor = code_tensor.type(torch.LongTensor)
-        code_lengths = torch.tensor(code_lengths).type(torch.LongTensor).cuda()
-        sent_lengths = torch.tensor(sent_lengths).type(torch.LongTensor).cuda()
-        
+        # ------------------------------------------
+        # code_lengths = torch.tensor(code_lengths).type(torch.LongTensor).cuda()
+        # sent_lengths = torch.tensor(sent_lengths).type(torch.LongTensor).cuda()
+        code_lengths = torch.tensor(code_lengths).type(torch.LongTensor)
+        sent_lengths = torch.tensor(sent_lengths).type(torch.LongTensor)
         code_embeds, word_att_weights, sent_att_weights, sents = self.sent_attention(code_tensor, code_lengths, sent_lengths)
 
         scores = self.fc(code_embeds)
@@ -85,7 +87,8 @@ class SentenceAttention(nn.Module):
 
         # Sort code_tensor by decreasing order in length
         code_lengths, code_perm_idx = code_lengths.sort(dim=0, descending=True)
-        code_tensor = code_tensor[code_perm_idx]
+
+        code_tensor =  code_tensor.to(code_perm_idx.device)[code_perm_idx]
         sent_lengths = sent_lengths[code_perm_idx]
 
         # Make a long batch of sentences by removing pad-sentences
@@ -107,6 +110,7 @@ class SentenceAttention(nn.Module):
         sents, word_att_weights = self.word_attention(packed_sents.data, packed_sent_lengths.data)
 
         sents = self.dropout(sents)
+        # sents = self.dropout(sents.cuda())
 
         # Sentence-level GRU over sentence embeddings
         packed_sents, _ = self.gru(PackedSequence(sents, valid_bsz))
@@ -195,6 +199,7 @@ class WordAttention(nn.Module):
         sents = sents[sent_perm_idx]
 
         sents = self.embeddings(sents.cuda())
+        # sents = self.embeddings(sents)
 
         packed_words = pack_padded_sequence(sents, lengths=sent_lengths.tolist(), batch_first=True)
 

@@ -26,6 +26,8 @@ class SigmoidActivationFunction(ActivationFunction):
         :param x: array-like, shape = (n_features, )
         :return:
         """
+        # ignore overflow and invalid warnings
+        np.warnings.filterwarnings('ignore', '(overflow|invalid)')
         return 1 / (1.0 + np.exp(-x))
 
     @classmethod

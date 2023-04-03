@@ -9,31 +9,46 @@ from tqdm import tqdm
 from DeepLineDP_model import *
 from my_util import *
 
-torch.manual_seed(0) 
-
+torch.backends.cuda.max_split_size_mb = 3000
+torch.manual_seed(0)
 
 all_eval_rels_cross_projects = {
-    'activemq': ['camel-2.10.0', 'camel-2.11.0', 'derby-10.5.1.1', 'groovy-1_6_BETA_2', 'hbase-0.95.2', 'hive-0.12.0', 'jruby-1.5.0', 'jruby-1.7.0.preview1', 'lucene-3.0.0', 'lucene-3.1', 'wicket-1.5.3'], 
-    'camel': ['activemq-5.2.0', 'activemq-5.3.0', 'activemq-5.8.0', 'derby-10.5.1.1', 'groovy-1_6_BETA_2', 'hbase-0.95.2', 'hive-0.12.0', 'jruby-1.5.0', 'jruby-1.7.0.preview1', 'lucene-3.0.0', 'lucene-3.1', 'wicket-1.5.3'], 
-    'derby': ['activemq-5.2.0', 'activemq-5.3.0', 'activemq-5.8.0', 'camel-2.10.0', 'camel-2.11.0', 'groovy-1_6_BETA_2', 'hbase-0.95.2', 'hive-0.12.0', 'jruby-1.5.0', 'jruby-1.7.0.preview1', 'lucene-3.0.0', 'lucene-3.1', 'wicket-1.5.3'], 
-    'groovy': ['activemq-5.2.0', 'activemq-5.3.0', 'activemq-5.8.0', 'camel-2.10.0', 'camel-2.11.0', 'derby-10.5.1.1', 'hbase-0.95.2', 'hive-0.12.0', 'jruby-1.5.0', 'jruby-1.7.0.preview1', 'lucene-3.0.0', 'lucene-3.1', 'wicket-1.5.3'], 
-    'hbase': ['activemq-5.2.0', 'activemq-5.3.0', 'activemq-5.8.0', 'camel-2.10.0', 'camel-2.11.0', 'derby-10.5.1.1', 'groovy-1_6_BETA_2', 'hive-0.12.0', 'jruby-1.5.0', 'jruby-1.7.0.preview1', 'lucene-3.0.0', 'lucene-3.1', 'wicket-1.5.3'], 
-    'hive': ['activemq-5.2.0', 'activemq-5.3.0', 'activemq-5.8.0', 'camel-2.10.0', 'camel-2.11.0', 'derby-10.5.1.1', 'groovy-1_6_BETA_2', 'hbase-0.95.2', 'jruby-1.5.0', 'jruby-1.7.0.preview1', 'lucene-3.0.0', 'lucene-3.1', 'wicket-1.5.3'], 
-    'jruby': ['activemq-5.2.0', 'activemq-5.3.0', 'activemq-5.8.0', 'camel-2.10.0', 'camel-2.11.0', 'derby-10.5.1.1', 'groovy-1_6_BETA_2', 'hbase-0.95.2', 'hive-0.12.0', 'lucene-3.0.0', 'lucene-3.1', 'wicket-1.5.3'], 
-    'lucene': ['activemq-5.2.0', 'activemq-5.3.0', 'activemq-5.8.0', 'camel-2.10.0', 'camel-2.11.0', 'derby-10.5.1.1', 'groovy-1_6_BETA_2', 'hbase-0.95.2', 'hive-0.12.0', 'jruby-1.5.0', 'jruby-1.7.0.preview1', 'wicket-1.5.3'], 
-    'wicket': ['activemq-5.2.0', 'activemq-5.3.0', 'activemq-5.8.0', 'camel-2.10.0', 'camel-2.11.0', 'derby-10.5.1.1', 'groovy-1_6_BETA_2', 'hbase-0.95.2', 'hive-0.12.0', 'jruby-1.5.0', 'jruby-1.7.0.preview1', 'lucene-3.0.0', 'lucene-3.1']}
-
+    'activemq': ['camel-2.10.0', 'camel-2.11.0', 'derby-10.5.1.1', 'groovy-1_6_BETA_2', 'hbase-0.95.2', 'hive-0.12.0',
+                 'jruby-1.5.0', 'jruby-1.7.0.preview1', 'lucene-3.0.0', 'lucene-3.1', 'wicket-1.5.3'],
+    'camel': ['activemq-5.2.0', 'activemq-5.3.0', 'activemq-5.8.0', 'derby-10.5.1.1', 'groovy-1_6_BETA_2',
+              'hbase-0.95.2', 'hive-0.12.0', 'jruby-1.5.0', 'jruby-1.7.0.preview1', 'lucene-3.0.0', 'lucene-3.1',
+              'wicket-1.5.3'],
+    'derby': ['activemq-5.2.0', 'activemq-5.3.0', 'activemq-5.8.0', 'camel-2.10.0', 'camel-2.11.0', 'groovy-1_6_BETA_2',
+              'hbase-0.95.2', 'hive-0.12.0', 'jruby-1.5.0', 'jruby-1.7.0.preview1', 'lucene-3.0.0', 'lucene-3.1',
+              'wicket-1.5.3'],
+    'groovy': ['activemq-5.2.0', 'activemq-5.3.0', 'activemq-5.8.0', 'camel-2.10.0', 'camel-2.11.0', 'derby-10.5.1.1',
+               'hbase-0.95.2', 'hive-0.12.0', 'jruby-1.5.0', 'jruby-1.7.0.preview1', 'lucene-3.0.0', 'lucene-3.1',
+               'wicket-1.5.3'],
+    'hbase': ['activemq-5.2.0', 'activemq-5.3.0', 'activemq-5.8.0', 'camel-2.10.0', 'camel-2.11.0', 'derby-10.5.1.1',
+              'groovy-1_6_BETA_2', 'hive-0.12.0', 'jruby-1.5.0', 'jruby-1.7.0.preview1', 'lucene-3.0.0', 'lucene-3.1',
+              'wicket-1.5.3'],
+    'hive': ['activemq-5.2.0', 'activemq-5.3.0', 'activemq-5.8.0', 'camel-2.10.0', 'camel-2.11.0', 'derby-10.5.1.1',
+             'groovy-1_6_BETA_2', 'hbase-0.95.2', 'jruby-1.5.0', 'jruby-1.7.0.preview1', 'lucene-3.0.0', 'lucene-3.1',
+             'wicket-1.5.3'],
+    'jruby': ['activemq-5.2.0', 'activemq-5.3.0', 'activemq-5.8.0', 'camel-2.10.0', 'camel-2.11.0', 'derby-10.5.1.1',
+              'groovy-1_6_BETA_2', 'hbase-0.95.2', 'hive-0.12.0', 'lucene-3.0.0', 'lucene-3.1', 'wicket-1.5.3'],
+    'lucene': ['activemq-5.2.0', 'activemq-5.3.0', 'activemq-5.8.0', 'camel-2.10.0', 'camel-2.11.0', 'derby-10.5.1.1',
+               'groovy-1_6_BETA_2', 'hbase-0.95.2', 'hive-0.12.0', 'jruby-1.5.0', 'jruby-1.7.0.preview1',
+               'wicket-1.5.3'],
+    'wicket': ['activemq-5.2.0', 'activemq-5.3.0', 'activemq-5.8.0', 'camel-2.10.0', 'camel-2.11.0', 'derby-10.5.1.1',
+               'groovy-1_6_BETA_2', 'hbase-0.95.2', 'hive-0.12.0', 'jruby-1.5.0', 'jruby-1.7.0.preview1',
+               'lucene-3.0.0', 'lucene-3.1']}
 
 arg = argparse.ArgumentParser()
 
-arg.add_argument('-dataset',type=str, default='activemq', help='software project name (lowercase)')
+arg.add_argument('-dataset', type=str, default='activemq', help='software project name (lowercase)')
 arg.add_argument('-embed_dim', type=int, default=50, help='word embedding size')
 arg.add_argument('-word_gru_hidden_dim', type=int, default=64, help='word attention hidden size')
 arg.add_argument('-sent_gru_hidden_dim', type=int, default=64, help='sentence attention hidden size')
 arg.add_argument('-word_gru_num_layers', type=int, default=1, help='number of GRU layer at word level')
 arg.add_argument('-sent_gru_num_layers', type=int, default=1, help='number of GRU layer at sentence level')
-arg.add_argument('-exp_name',type=str,default='')
-arg.add_argument('-target_epochs',type=str,default='7')
+arg.add_argument('-exp_name', type=str, default='')
+arg.add_argument('-target_epochs', type=str, default='180')
 arg.add_argument('-dropout', type=float, default=0.2, help='dropout rate')
 
 args = arg.parse_args()
@@ -62,37 +77,33 @@ prediction_dir = '../output/prediction/DeepLineDP/cross-project/'
 
 file_lvl_gt = '../datasets/preprocessed_data/'
 
-
 if not os.path.exists(prediction_dir):
     os.makedirs(prediction_dir)
 
-def predict_defective_files_in_releases(dataset_name, target_epochs):
 
-    
-    actual_save_model_dir = save_model_dir+dataset_name+'/'
-    actual_prediction_dir = prediction_dir+dataset_name+'/'
+def predict_defective_files_in_releases(dataset_name, target_epochs):
+    actual_save_model_dir = save_model_dir + dataset_name + '/'
+    actual_prediction_dir = prediction_dir + dataset_name + '/'
 
     if not os.path.exists(actual_prediction_dir):
         os.makedirs(actual_prediction_dir)
 
     train_rel = all_train_releases[dataset_name]
-    test_rel = all_eval_rels_cross_projects[dataset_name] 
+    test_rel = all_eval_rels_cross_projects[dataset_name]
 
     w2v_dir = get_w2v_path()
 
-    word2vec_file_dir = os.path.join(w2v_dir,dataset_name+'-'+str(embed_dim)+'dim.bin')
+    word2vec_file_dir = os.path.join(w2v_dir, dataset_name + '-' + str(embed_dim) + 'dim.bin')
 
     word2vec = Word2Vec.load(word2vec_file_dir)
-    print('load Word2Vec for',dataset_name,'finished')
+    print('load Word2Vec for', dataset_name, 'finished')
 
     total_vocab = len(word2vec.wv.vocab)
 
-    vocab_size = total_vocab +1 # for unknown tokens
+    vocab_size = total_vocab + 1  # for unknown tokens
 
-        
-    max_sent_len = 999999
-    
-        
+    max_sent_len = 9999  # 最大句子长度
+
     model = HierarchicalAttentionNetwork(
         vocab_size=vocab_size,
         embed_dim=embed_dim,
@@ -106,10 +117,10 @@ def predict_defective_files_in_releases(dataset_name, target_epochs):
         dropout=dropout)
 
     if exp_name == '':
-        checkpoint = torch.load(actual_save_model_dir+'checkpoint_'+target_epochs+'epochs.pth')
+        checkpoint = torch.load(actual_save_model_dir + 'checkpoint_' + target_epochs + 'epochs.pth')
 
     else:
-        checkpoint = torch.load(actual_save_model_dir+exp_name+'/checkpoint_'+target_epochs+'epochs.pth')
+        checkpoint = torch.load(actual_save_model_dir + exp_name + '/checkpoint_' + target_epochs + 'epochs.pth')
 
     model.load_state_dict(checkpoint['model_state_dict'])
 
@@ -119,16 +130,16 @@ def predict_defective_files_in_releases(dataset_name, target_epochs):
     model.eval()
 
     for rel in test_rel:
-        print('using model from {} to generate prediction of {}'.format(train_rel,rel))
-        
-        actual_intermediate_output_dir = intermediate_output_dir+dataset_name+'/'+train_rel+'-'+rel+'/'
+        print('using model from {} to generate prediction of {}'.format(train_rel, rel))
+
+        actual_intermediate_output_dir = intermediate_output_dir + dataset_name + '/' + train_rel + '-' + rel + '/'
 
         if not os.path.exists(actual_intermediate_output_dir):
             os.makedirs(actual_intermediate_output_dir)
 
         test_df = get_df(rel)
-    
-        row_list = [] # for creating dataframe later...
+
+        row_list = []  # for creating dataframe later...
 
         for filename, df in tqdm(test_df.groupby('filename')):
 
@@ -144,18 +155,22 @@ def predict_defective_files_in_releases(dataset_name, target_epochs):
             code3d = [code2d]
 
             codevec = get_x_vec(code3d, word2vec)
-            codevec_padded = pad_code(codevec,max_sent_len,limit_sent_len=False, mode='test') 
+            codevec_padded = pad_code(codevec, max_sent_len, limit_sent_len=False, mode='test')
 
             with torch.no_grad():
-                codevec_padded_tensor = torch.tensor(codevec_padded)
+                codevec_padded_tensor = torch.tensor(codevec_padded).to("cuda:0")
+                if codevec_padded_tensor.shape[1] >= 30000:  # 跳过太长的文件
+                    print('skip file', filename, 'due to too long lines')
+                    continue
                 output, word_att_weights, line_att_weight, _ = model(codevec_padded_tensor)
                 file_prob = output.item()
                 prediction = bool(round(output.item()))
+                torch.cuda.empty_cache()
 
             numpy_word_attn = word_att_weights[0].cpu().detach().numpy()
             numpy_line_attn = line_att_weight[0].cpu().detach().numpy()
-
-            for i in range(0,len(code)):
+            torch.cuda.empty_cache()
+            for i in range(0, len(code)):
                 cur_line = code[i]
                 cur_line_label = line_label[i]
                 cur_line_number = line_number[i]
@@ -164,35 +179,56 @@ def predict_defective_files_in_releases(dataset_name, target_epochs):
 
                 token_list = cur_line.strip().split()
 
-                max_len = min(len(token_list),50) # limit max token each line
+                max_len = min(len(token_list), 50)  # limit max token each line
 
-                for j in range(0,max_len):  
+                for j in range(0, max_len):
                     tok = token_list[j]
                     word_attn = numpy_word_attn[i][j]
 
                     row_dict = {
-                        'project': dataset_name, 
-                        'train': train_rel, 
-                        'test': rel, 
-                        'filename': filename, 
-                        'file-level-ground-truth': file_label, 
-                        'prediction-prob': file_prob, 
-                        'prediction-label': prediction, 
-                        'line-number': cur_line_number, 
-                        'line-level-ground-truth': cur_line_label, 
-                        'is-comment-line': cur_is_comment, 
-                        'token': tok, 
+                        'project': dataset_name,
+                        'train': train_rel,
+                        'test': rel,
+                        'filename': filename,
+                        'file-level-ground-truth': file_label,
+                        'prediction-prob': file_prob,
+                        'prediction-label': prediction,
+                        'line-number': cur_line_number,
+                        'line-level-ground-truth': cur_line_label,
+                        'is-comment-line': cur_is_comment,
+                        'token': tok,
                         'token-attention-score': word_attn,
                         'line-attention-score': cur_line_attn
-                        }
+                    }
 
                     row_list.append(row_dict)
 
         df = pd.DataFrame(row_list)
 
-        df.to_csv(actual_prediction_dir+train_rel+'-'+rel+'.csv', index=False)
+        tp = ((df['prediction-label'] == df['file-level-ground-truth']) & (df['file-level-ground-truth'] == True)).sum()
+        fp = ((df['prediction-label'] != df['file-level-ground-truth']) & (
+                df['file-level-ground-truth'] == False)).sum()
+        fn = ((df['prediction-label'] != df['file-level-ground-truth']) & (df['file-level-ground-truth'] == True)).sum()
+        tn = ((df['prediction-label'] == df['file-level-ground-truth']) & (
+                df['file-level-ground-truth'] == False)).sum()
+        # 计算平均准确率
+        accuracy = (tp + tn) / (tp + tn + fp + fn) * 100
+        # 计算Recall
+        recall = (tp) / (tp + fn) * 100
+        # 计算Precision
+        precision = (tp) / (tp + fp) * 100
+        # 计算F1
+        f1 = 2 * (precision * recall) / (precision + recall)
+
+        print("Accuracy: {:.2f}%".format(accuracy))
+        print("Recall: {:.2f}%".format(recall))
+        print("Precision: {:.2f}%".format(precision))
+        print("F1: {:.2f}%".format(f1))
+
+        df.to_csv(actual_prediction_dir + train_rel + '-' + rel + '.csv', index=False)
 
         print('finished release', rel)
+
 
 dataset_name = args.dataset
 target_epochs = args.target_epochs

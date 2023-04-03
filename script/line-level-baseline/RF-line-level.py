@@ -9,9 +9,10 @@ from torch.utils import data
 
 from tqdm import tqdm
 
-sys.path.append('../')
-from DeepLineDP_model import *
-from my_util import *
+# sys.path.append('../')
+
+from script.DeepLineDP_model import *
+from script.my_util import *
 
 model_dir = '../../output/model/RF-line-level/'
 result_dir = '../../output/RF-line-level-result/'
@@ -34,18 +35,19 @@ use_layer_norm = True
 
 to_lowercase = True
 
+
 def get_DeepLineDP_and_W2V(dataset_name):
     w2v_dir = get_w2v_path()
 
-    word2vec_file_dir = os.path.join(w2v_dir,dataset_name+'-'+str(embed_dim)+'dim.bin')
+    word2vec_file_dir = os.path.join(w2v_dir, dataset_name + '-' + str(embed_dim) + 'dim.bin')
 
-    word2vec = Word2Vec.load('../'+word2vec_file_dir)
-    print('load Word2Vec for',dataset_name,'finished')
+    word2vec = Word2Vec.load('../' + word2vec_file_dir)
+    print('load Word2Vec for', dataset_name, 'finished')
 
     total_vocab = len(word2vec.wv.vocab)
 
-    vocab_size = total_vocab +1 # for unknown tokens
-    
+    vocab_size = total_vocab + 1  # for unknown tokens
+
     model = HierarchicalAttentionNetwork(
         vocab_size=vocab_size,
         embed_dim=embed_dim,
@@ -58,8 +60,7 @@ def get_DeepLineDP_and_W2V(dataset_name):
         use_layer_norm=use_layer_norm,
         dropout=0.001)
 
-    checkpoint = torch.load('../../output/model/DeepLineDP/'+dataset_name+'/checkpoint_7epochs.pth')
-
+    checkpoint = torch.load('../../output/model/DeepLineDP/' + dataset_name + '/checkpoint_199epochs.pth')
 
     model.load_state_dict(checkpoint['model_state_dict'])
 
@@ -70,6 +71,7 @@ def get_DeepLineDP_and_W2V(dataset_name):
 
     return model, word2vec
 
+
 def train_RF_model(dataset_name):
     model, word2vec = get_DeepLineDP_and_W2V(dataset_name)
 
@@ -78,13 +80,12 @@ def train_RF_model(dataset_name):
     train_rel = all_train_releases[dataset_name]
 
     train_df = get_df(train_rel, is_baseline=True)
-    
+
     line_rep_list = []
     all_line_label = []
 
     # loop to get line representation of each file in train data
     for filename, df in tqdm(train_df.groupby('filename')):
-
         code = df['code_line'].tolist()
         line_label = df['line-label'].tolist()
 
@@ -108,16 +109,16 @@ def train_RF_model(dataset_name):
 
     print('prepare data finished')
 
-    clf.fit(x,all_line_label)
+    clf.fit(x, all_line_label)
 
-    pickle.dump(clf, open(model_dir+dataset_name+'-RF-model.bin','wb'))
+    pickle.dump(clf, open(model_dir + dataset_name + '-RF-model.bin', 'wb'))
 
-    print('finished training model of',dataset_name)
+    print('finished training model of', dataset_name)
 
 
 def predict_defective_line(dataset_name):
     model, word2vec = get_DeepLineDP_and_W2V(dataset_name)
-    clf = pickle.load(open(model_dir+dataset_name+'-RF-model.bin','rb'))
+    clf = pickle.load(open(model_dir + dataset_name + '-RF-model.bin', 'rb'))
 
     print('load model finished')
 
@@ -126,13 +127,12 @@ def predict_defective_line(dataset_name):
     for rel in test_rels:
         test_df = get_df(rel, is_baseline=True)
 
-        test_df = test_df[test_df['file-label']==True]
-        test_df = test_df.drop(['is_comment','is_test_file','is_blank'],axis=1)
+        test_df = test_df[test_df['file-label'] == True]
+        test_df = test_df.drop(['is_comment', 'is_test_file', 'is_blank'], axis=1)
 
-        all_df_list = [] # store df for saving later...
+        all_df_list = []  # store df for saving later...
 
         for filename, df in tqdm(test_df.groupby('filename')):
-
             code = df['code_line'].tolist()
 
             code2d = prepare_code2d(code, to_lowercase)
@@ -155,9 +155,10 @@ def predict_defective_line(dataset_name):
 
         all_df = pd.concat(all_df_list)
 
-        all_df.to_csv(result_dir+rel+'-line-lvl-result.csv',index=False)
+        all_df.to_csv(result_dir + rel + '-line-lvl-result.csv', index=False)
 
-        print('finished',rel)
+        print('finished', rel)
+
 
 proj_name = sys.argv[1]
 

@@ -23,7 +23,7 @@ import slp.core.translating.Vocabulary;
 
 public class n_gram
 {
-	public static String root_dir = "./n_gram_data/";
+	public static String root_dir = "../../../datasets/n_gram_data/";
 	public static String result_dir = "./n_gram_result/";
 	
 	public static String all_dataset[] = {"activemq","camel","derby","groovy","hbase","hive", "jruby","lucene","wicket"};
@@ -123,7 +123,7 @@ public class n_gram
 				
 			}
 		}
-		FileUtils.write(new File(result_dir+test_release+"-line-lvl-result.txt"), sb.toString(),"UTF-8");			
+		FileUtils.write(new File(result_dir+test_release+"-line-lvl-result.csv"), sb.toString(),"UTF-8");
 	}
 	
 	public static void train_eval_model(int dataset_idx) throws Exception
