@@ -14,21 +14,22 @@ from sklearn.utils import compute_class_weight
 from DeepLineDP_model import *
 from my_util import *
 
+proj_names = list(all_train_releases.keys())
 torch.manual_seed(0)
 
 arg = argparse.ArgumentParser()
 
 arg.add_argument('-dataset', type=str, default='hbase', help='software project name (lowercase)')
 arg.add_argument('-batch_size', type=int, default=8)
-arg.add_argument('-num_epochs', type=int, default=54)
+arg.add_argument('-num_epochs', type=int, default=30)
 arg.add_argument('-embed_dim', type=int, default=50, help='word embedding size')
 arg.add_argument('-word_gru_hidden_dim', type=int, default=64, help='word attention hidden size')
 arg.add_argument('-sent_gru_hidden_dim', type=int, default=64, help='sentence attention hidden size')
 arg.add_argument('-word_gru_num_layers', type=int, default=1, help='number of GRU layer at word level')
 arg.add_argument('-sent_gru_num_layers', type=int, default=1, help='number of GRU layer at sentence level')
 arg.add_argument('-dropout', type=float, default=0.2, help='dropout rate')
-arg.add_argument('-lr', type=float, default=0.001, help='learning rate')
-arg.add_argument('-exp_name', type=str, default='')
+arg.add_argument('-lr', type=float, default=0.0001, help='learning rate')
+arg.add_argument('-exp_name', type=str, default='exp00')
 
 args = arg.parse_args()
 
@@ -90,7 +91,7 @@ def train_model(dataset_name):
 
     if not exp_name == '':  # 如果有实验名
         actual_save_model_dir = actual_save_model_dir + exp_name + '/'
-        loss_dir = loss_dir + exp_name
+        loss_dir = loss_dir + exp_name + '/'
 
     if not os.path.exists(actual_save_model_dir):  # 如果不存在该路径
         os.makedirs(actual_save_model_dir)
@@ -142,8 +143,8 @@ def train_model(dataset_name):
     train_dl = get_dataloader(x_train_vec, train_label, batch_size, max_sent_len)
     valid_dl = get_dataloader(x_valid_vec, valid_label, batch_size, max_sent_len)
 
-    abs_path=os.path.abspath(loss_dir + dataset_name + '-loss_record.csv')
-    print('train-result:'  + abs_path)
+    abs_path = os.path.abspath(loss_dir + dataset_name + '-loss_record.csv')
+    print('train-result:' + abs_path)
     # 获取模型
     model = HierarchicalAttentionNetwork(
         vocab_size=vocab_size,
@@ -185,12 +186,15 @@ def train_model(dataset_name):
         val_loss_all_epochs = []  # 校验集损失
 
     else:
-        checkpoint_nums = [int(re.findall('\d+', s)[0]) for s in checkpoint_files]  # 获取模型的轮数
+        checkpoint_nums = [int(re.findall('\d+', re.findall('\d+epochs', s)[0])[0]) for s in checkpoint_files]  # 获取模型的轮数
         current_checkpoint_num = max(checkpoint_nums)  # 获取最大轮数
-
-        checkpoint = torch.load(
-            actual_save_model_dir + 'checkpoint_' + str(current_checkpoint_num) + 'epochs.pth')  # 加载模型
-
+        if exp_name != '':  # 如果不是空
+            checkpoint = torch.load(
+                actual_save_model_dir + 'checkpoint_' + exp_name + '_' + str(
+                    current_checkpoint_num) + 'epochs.pth')  # 加载模型
+        else:
+            checkpoint = torch.load(
+                actual_save_model_dir + 'checkpoint_' + str(current_checkpoint_num) + 'epochs.pth')
         model.load_state_dict(checkpoint['model_state_dict'])  # 加载模型参数
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])  # 加载优化器参数
 
@@ -214,64 +218,67 @@ def train_model(dataset_name):
 
             weight_tensor = get_loss_weight(labels)  # 获取损失权重
 
-            criterion.weight = weight_tensor # 设置损失函数损失权重
+            criterion.weight = weight_tensor  # 设置损失函数损失权重
 
-            loss = criterion(output, labels_cuda.reshape(batch_size, 1)) # 计算损失
+            loss = criterion(output, labels_cuda.reshape(batch_size, 1))  # 计算损失
 
-            train_losses.append(loss.item()) # 记录损失
+            train_losses.append(loss.item())  # 记录损失
 
-            torch.cuda.empty_cache() # 清空GPU缓存
+            torch.cuda.empty_cache()  # 清空GPU缓存
 
-            loss.backward() # 反向传播
-            nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm) # 梯度裁剪
+            loss.backward()  # 反向传播
+            nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)  # 梯度裁剪
 
-            optimizer.step() # 更新参数
+            optimizer.step()  # 更新参数
 
-            torch.cuda.empty_cache() # 清空GPU缓存
+            torch.cuda.empty_cache()  # 清空GPU缓存
 
-        train_loss_all_epochs.append(np.mean(train_losses)) # 记录平均损失
+        train_loss_all_epochs.append(np.mean(train_losses))  # 记录平均损失
 
-        with torch.no_grad(): # 不计算梯度
+        with torch.no_grad():  # 不计算梯度
 
-            criterion.weight = None # 设置损失函数损失权重为None
-            model.eval() # 验证模式
+            criterion.weight = None  # 设置损失函数损失权重为None
+            model.eval()  # 验证模式
 
-            for inputs, labels in valid_dl: # 迭代校验集
-                inputs, labels = inputs.cuda(), labels.cuda() # 将数据放到GPU上
-                output, _, __, ___ = model(inputs) #  获取输出
+            for inputs, labels in valid_dl:  # 迭代校验集
+                inputs, labels = inputs.cuda(), labels.cuda()  # 将数据放到GPU上
+                output, _, __, ___ = model(inputs)  # 获取输出
 
-                val_loss = criterion(output, labels.reshape(batch_size, 1)) # 计算损失
+                val_loss = criterion(output, labels.reshape(batch_size, 1))  # 计算损失
 
-                val_losses.append(val_loss.item()) # 记录损失
+                val_losses.append(val_loss.item())  # 记录损失
 
-            val_loss_all_epochs.append(np.mean(val_losses)) # 记录平均损失
+            val_loss_all_epochs.append(np.mean(val_losses))  # 记录平均损失
 
-        if epoch % save_every_epochs == 0: # 每save_every_epochs轮保存模型
-            print(dataset_name, '- at epoch:', str(epoch)) # 打印轮数
+        if epoch % save_every_epochs == 0:  # 每save_every_epochs轮保存模型
+            print(dataset_name, '- at epoch:', str(epoch))  # 打印轮数
 
-            if exp_name == '': # 如果没有实验名称
-                torch.save({ # 保存模型
-                    'epoch': epoch, # 轮数
-                    'model_state_dict': model.state_dict(), # 模型参数
-                    'optimizer_state_dict': optimizer.state_dict() # 优化器参数
+            if exp_name == '':  # 如果没有实验名称
+                torch.save({  # 保存模型
+                    'epoch': epoch,  # 轮数
+                    'model_state_dict': model.state_dict(),  # 模型参数
+                    'optimizer_state_dict': optimizer.state_dict()  # 优化器参数
                 },
-                    actual_save_model_dir + 'checkpoint_' + str(epoch) + 'epochs.pth') # 保存模型
+                    actual_save_model_dir + 'checkpoint_' + str(epoch) + 'epochs.pth')  # 保存模型
             else:
                 torch.save({
-                    'epoch': epoch, # 轮数
-                    'model_state_dict': model.state_dict(), # 模型参数
-                    'optimizer_state_dict': optimizer.state_dict() # 优化器参数
+                    'epoch': epoch,  # 轮数
+                    'model_state_dict': model.state_dict(),  # 模型参数
+                    'optimizer_state_dict': optimizer.state_dict()  # 优化器参数
                 },
-                    actual_save_model_dir + 'checkpoint_' + exp_name + '_' + str(epoch) + 'epochs.pth') # 保存模型
+                    actual_save_model_dir + 'checkpoint_' + exp_name + '_' + str(epoch) + 'epochs.pth')  # 保存模型
 
-        loss_df = pd.DataFrame() # 创建损失记录
-        loss_df['epoch'] = np.arange(1, len(train_loss_all_epochs) + 1) # 记录轮数
-        loss_df['train_loss'] = train_loss_all_epochs # 记录训练集损失
-        loss_df['valid_loss'] = val_loss_all_epochs # 记录校验集损失
+        loss_df = pd.DataFrame()  # 创建损失记录
+        loss_df['epoch'] = np.arange(1, len(train_loss_all_epochs) + 1)  # 记录轮数
+        loss_df['train_loss'] = train_loss_all_epochs  # 记录训练集损失
+        loss_df['valid_loss'] = val_loss_all_epochs  # 记录校验集损失
 
-        loss_df.to_csv(loss_dir + dataset_name + '-loss_record.csv', index=False) # 保存损失记录
+        loss_df.to_csv(loss_dir + dataset_name + '-loss_record.csv', index=False)  # 保存损失记录
 
 
 dataset_name = args.dataset
-train_model(dataset_name)
 
+# for proj in proj_names:
+#     train_model(proj)
+#     print('finish', proj)
+train_model(dataset_name)
